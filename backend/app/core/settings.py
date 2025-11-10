@@ -24,6 +24,7 @@ class Settings(BaseSettings):
 
     embed_model: str = Field("sentence-transformers/bge-small-en-v1.5", alias="EMBED_MODEL")
     ollama_host: str = Field("http://localhost:11434", alias="OLLAMA_HOST")
+    ollama_model: str = Field("llama3.2:3b", alias="OLLAMA_MODEL")
 
     class Config:
         env_file = ".env"

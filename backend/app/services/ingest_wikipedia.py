@@ -167,6 +167,7 @@ def _build_points(
             "chunk_index": idx,
             "word_count": len(chunk.split()),
             "page_id": page.page_id,
+            "content": chunk,
         }
         point_id = f"{page.page_id}:{idx}"
         points.append(
