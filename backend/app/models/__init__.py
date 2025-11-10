@@ -1,5 +1,9 @@
 from .chat import ChatHistoryTurn, ChatRequest, ChatResponse, ChatSource
-from .ingest import WikipediaIngestRequest, WikipediaIngestResponse
+from .ingest import (
+    WikipediaIngestRequest,
+    WikipediaIngestResponse,
+    WikipediaUrlIngestRequest,
+)
 
 __all__ = [
     "ChatHistoryTurn",
@@ -8,5 +12,6 @@ __all__ = [
     "ChatSource",
     "WikipediaIngestRequest",
     "WikipediaIngestResponse",
+    "WikipediaUrlIngestRequest",
 ]
 

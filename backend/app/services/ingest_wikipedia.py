@@ -7,6 +7,7 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import Iterable, List, Sequence
+from urllib.parse import unquote, urlparse
 
 import requests
 from qdrant_client import QdrantClient
@@ -15,7 +16,11 @@ from qdrant_client.http import models as rest
 from app.core.settings import get_settings
 from app.db.qdrant import get_qdrant_client
 from app.embeddings.model import embed_documents
-from app.models import WikipediaIngestRequest, WikipediaIngestResponse
+from app.models import (
+    WikipediaIngestRequest,
+    WikipediaIngestResponse,
+    WikipediaUrlIngestRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +114,19 @@ class WikipediaFetcher:
             )
         return results
 
+    def fetch_single_page(self, title: str, *, topic: str | None = None) -> WikiPage | None:
+        """
+        Fetch a single page by title using the search API for consistency.
+        """
+        pages = self.search(title, limit=1)
+        if not pages:
+            return None
+
+        page = pages[0]
+        if topic is not None:
+            page.topic = topic
+        return page
+
 
 def _clean_text(text: str) -> str:
     """
@@ -169,7 +187,9 @@ def _build_points(
             "page_id": page.page_id,
             "content": chunk,
         }
-        point_id = f"{page.page_id}:{idx}"
+        # Generate a stable UUID from page_id and chunk index
+        import uuid
+        point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{page.page_id}:{idx}"))
         points.append(
             rest.PointStruct(
                 id=point_id,
@@ -209,36 +229,25 @@ class WikipediaIngestor:
         embedded_chunks = 0
         skipped_pages = 0
 
+        processed_topics: list[str] = []
         for topic in request.topics:
             pages = self.fetcher.search(topic, limit=request.max_pages_per_topic)
             if not pages:
                 logger.warning("No pages found for topic '%s'", topic)
                 continue
 
-            for page in pages:
-                chunks = _chunk_text(
-                    page.content,
-                    chunk_size=request.chunk_size,
-                    overlap=request.chunk_overlap,
-                )
-                if not chunks:
-                    skipped_pages += 1
-                    logger.debug(
-                        "No chunks produced for page %s (%s); skipping",
-                        page.title,
-                        page.page_id,
-                    )
-                    continue
+            topic_processed, topic_embedded, topic_skipped = self._process_pages(
+                pages,
+                chunk_size=request.chunk_size,
+                chunk_overlap=request.chunk_overlap,
+                dry_run=request.dry_run,
+            )
+            if topic_processed or topic_embedded:
+                processed_topics.append(topic)
 
-                embeddings = embed_documents(chunks)
-                embedded_chunks += len(chunks)
-                processed_pages += 1
-
-                if request.dry_run:
-                    continue
-
-                points = _build_points(page, chunks=chunks, embeddings=embeddings)
-                self._upsert_points(points)
+            processed_pages += topic_processed
+            embedded_chunks += topic_embedded
+            skipped_pages += topic_skipped
 
         logger.info(
             "Finished Wikipedia ingestion processed_pages=%s embedded_chunks=%s skipped_pages=%s dry_run=%s",
@@ -249,7 +258,64 @@ class WikipediaIngestor:
         )
 
         return WikipediaIngestResponse(
-            topics=request.topics,
+            topics=processed_topics or request.topics,
+            processed_pages=processed_pages,
+            embedded_chunks=embedded_chunks,
+            skipped_pages=skipped_pages,
+            dry_run=request.dry_run,
+        )
+
+    def run_from_urls(self, request: WikipediaUrlIngestRequest) -> WikipediaIngestResponse:
+        """
+        Execute the ingestion pipeline for explicit Wikipedia URLs.
+        """
+        logger.info(
+            "Starting Wikipedia URL ingestion urls=%s dry_run=%s",
+            request.urls,
+            request.dry_run,
+        )
+
+        self.fetcher = WikipediaFetcher(language=request.language)
+        processed_pages = 0
+        embedded_chunks = 0
+        skipped_pages = 0
+        processed_identifiers: list[str] = []
+
+        for url in request.urls:
+            title = _title_from_url(url)
+            if title is None:
+                logger.warning("Unable to determine Wikipedia title from URL '%s'; skipping", url)
+                continue
+
+            page = self.fetcher.fetch_single_page(title, topic=title)
+            if page is None:
+                logger.warning("No page found for Wikipedia URL '%s'", url)
+                continue
+
+            page_processed, page_embedded, page_skipped = self._process_pages(
+                [page],
+                chunk_size=request.chunk_size,
+                chunk_overlap=request.chunk_overlap,
+                dry_run=request.dry_run,
+            )
+
+            if page_processed:
+                processed_identifiers.append(page.title)
+
+            processed_pages += page_processed
+            embedded_chunks += page_embedded
+            skipped_pages += page_skipped
+
+        logger.info(
+            "Finished Wikipedia URL ingestion processed_pages=%s embedded_chunks=%s skipped_pages=%s dry_run=%s",
+            processed_pages,
+            embedded_chunks,
+            skipped_pages,
+            request.dry_run,
+        )
+
+        return WikipediaIngestResponse(
+            topics=processed_identifiers or request.urls,
             processed_pages=processed_pages,
             embedded_chunks=embedded_chunks,
             skipped_pages=skipped_pages,
@@ -269,4 +335,62 @@ class WikipediaIngestor:
             wait=True,
             points=points,
         )
+
+    def _process_pages(
+        self,
+        pages: Iterable[WikiPage],
+        *,
+        chunk_size: int,
+        chunk_overlap: int,
+        dry_run: bool,
+    ) -> tuple[int, int, int]:
+        processed_pages = 0
+        embedded_chunks = 0
+        skipped_pages = 0
+
+        for page in pages:
+            chunks = _chunk_text(
+                page.content,
+                chunk_size=chunk_size,
+                overlap=chunk_overlap,
+            )
+            if not chunks:
+                skipped_pages += 1
+                logger.debug(
+                    "No chunks produced for page %s (%s); skipping",
+                    page.title,
+                    page.page_id,
+                )
+                continue
+
+            embeddings = embed_documents(chunks)
+            embedded_chunks += len(chunks)
+            processed_pages += 1
+
+            if dry_run:
+                continue
+
+            points = _build_points(page, chunks=chunks, embeddings=embeddings)
+            self._upsert_points(points)
+
+        return processed_pages, embedded_chunks, skipped_pages
+
+
+def _title_from_url(url: str) -> str | None:
+    """
+    Extract the Wikipedia page title from a canonical article URL.
+    """
+    parsed = urlparse(url)
+    if "wikipedia.org" not in parsed.netloc:
+        raise ValueError(f"URL '{url}' does not appear to be a Wikipedia link.")
+
+    path = parsed.path.rstrip("/")
+    if not path:
+        return None
+
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return None
+
+    return unquote(segments[-1]).replace("_", " ")
 
