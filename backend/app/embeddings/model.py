@@ -4,16 +4,18 @@ Wrapper around SentenceTransformers to produce normalized embeddings.
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Iterable, Sequence, overload
+from typing import Iterable, Sequence, TYPE_CHECKING, overload
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from app.core.settings import get_settings
 
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer
+
 
 @lru_cache(maxsize=1)
-def get_embedding_model() -> SentenceTransformer:
+def get_embedding_model() -> "SentenceTransformer":
     """
     Load and cache the SentenceTransformers embedding model.
 
@@ -23,6 +25,8 @@ def get_embedding_model() -> SentenceTransformer:
     """
     settings = get_settings()
     model_name = settings.embed_model
+
+    from sentence_transformers import SentenceTransformer
 
     model = SentenceTransformer(model_name)
 
