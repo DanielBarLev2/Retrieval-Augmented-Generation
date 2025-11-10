@@ -8,9 +8,10 @@ from typing import Iterable, Sequence
 
 
 DEFAULT_SYSTEM_PROMPT = (
-    "You are a knowledgeable assistant that answers user questions using the provided "
-    "context. If the answer is not present in the context, respond with a brief note "
-    "that you cannot find the information."
+    "You are a knowledgeable assistant that prioritizes answering user questions using "
+    "the provided context. When the context does not contain the needed details, draw "
+    "on your broader expertise to offer a clear, accurate answer and optionally mention "
+    "that the response is based on general knowledge."
 )
 
 
