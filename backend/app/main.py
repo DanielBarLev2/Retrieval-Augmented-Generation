@@ -4,6 +4,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.settings import get_settings
+from app.db import (
+    close_mongo_client,
+    close_qdrant_client,
+    ensure_collection,
+    ensure_indexes,
+    get_mongo_client,
+    get_qdrant_client,
+    verify_connection,
+)
 from app.routers import health
 from app.routers import chat
 from app.routers import ingest
@@ -11,9 +20,18 @@ from app.routers import ingest
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # TODO: initialize Mongo and Qdrant clients here later
-    yield
-    # TODO: close clients here when added
+    mongo_client = get_mongo_client()
+    verify_connection(mongo_client)
+    ensure_indexes(mongo_client)
+
+    qdrant_client = get_qdrant_client()
+    ensure_collection(qdrant_client)
+
+    try:
+        yield
+    finally:
+        close_mongo_client()
+        close_qdrant_client()
 
 
 def create_app() -> FastAPI:
