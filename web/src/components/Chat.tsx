@@ -65,6 +65,7 @@ const Chat = ({ activeSessionId, onSessionChange, onRefreshSessions }: ChatProps
           sources: message.sources,
           latencyMs: message.latency_ms ?? undefined,
         }));
+        // Messages from backend are already sorted by created_at
         setMessages(hydratedMessages);
       } catch (err) {
         if (cancelled || (err as Error).name === 'AbortError') {
@@ -101,12 +102,24 @@ const Chat = ({ activeSessionId, onSessionChange, onRefreshSessions }: ChatProps
     };
   }, [activeSessionId, onSessionChange]);
 
+  const orderedMessages = useMemo(() => {
+    const orderMap = new Map(messages.map((message, index) => [message.id, index]));
+    return [...messages].sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : Number.NEGATIVE_INFINITY;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : Number.NEGATIVE_INFINITY;
+      if (aTime !== bTime) {
+        return aTime - bTime;
+      }
+      return (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0);
+    });
+  }, [messages]);
+
   const historyPayload = useMemo<ChatHistoryTurn[]>(() => {
-    return messages.map((message) => ({
+    return orderedMessages.map((message) => ({
       role: message.role,
       content: message.content,
     }));
-  }, [messages]);
+  }, [orderedMessages]);
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -123,6 +136,7 @@ const Chat = ({ activeSessionId, onSessionChange, onRefreshSessions }: ChatProps
         id: createMessageId(),
         role: 'user',
         content: trimmed,
+        createdAt: new Date().toISOString(),
       };
 
       setMessages((prev) => [...prev, userMessage]);
@@ -185,14 +199,10 @@ const Chat = ({ activeSessionId, onSessionChange, onRefreshSessions }: ChatProps
     <div className="chat-container">
       <header className="chat-header">
         <div>
-          <h1>Local RAG Chat</h1>
+          <h1>Retrieval-Augmented Generation</h1>
           <p className="chat-subtitle">
             Ask questions about the ingested Wikipedia topics. Responses cite retrieved sources.
           </p>
-        </div>
-        <div className="session-badge" aria-live="polite">
-          <span className="session-label">Session</span>
-          <span className="session-id">{activeSessionId ?? 'pending'}</span>
         </div>
       </header>
 
@@ -204,7 +214,7 @@ const Chat = ({ activeSessionId, onSessionChange, onRefreshSessions }: ChatProps
             <p>Welcome! Ask the assistant anything about Retrieval-Augmented Generation topics.</p>
           </div>
         )}
-        {messages.map((message) => (
+        {orderedMessages.map((message) => (
           <Message key={message.id} message={message} />
         ))}
         <div ref={endOfMessagesRef} />

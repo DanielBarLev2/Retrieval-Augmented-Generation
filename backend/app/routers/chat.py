@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from time import perf_counter
 from typing import Any, Iterable, List
 from uuid import uuid4
@@ -182,9 +182,8 @@ async def get_session_messages(session_id: str) -> ChatSessionMessages:
     collection = get_messages_collection()
 
     def _fetch() -> List[dict[str, Any]]:
-        cursor = (
-            collection.find({"session_id": session_id})
-            .sort("created_at", 1)
+        cursor = collection.find({"session_id": session_id}).sort(
+            [("created_at", 1), ("_id", 1)]
         )
         return list(cursor)
 
@@ -368,14 +367,16 @@ async def chat(request: ChatRequest) -> ChatResponse:
     latency_ms = (perf_counter() - start_time) * 1000.0
 
     session_id = request.session_id or str(uuid4())
-    created_at = datetime.now(timezone.utc)
+    user_created_at = datetime.now(timezone.utc)
+    # Ensure assistant timestamp is after user timestamp
+    assistant_created_at = user_created_at + timedelta(microseconds=1)
 
     user_document = {
         "session_id": session_id,
         "role": "user",
         "content": request.message,
         "sources": [],
-        "created_at": created_at,
+        "created_at": user_created_at,
     }
     assistant_document = {
         "session_id": session_id,
@@ -387,7 +388,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             "latency_ms": latency_ms,
             "retrieved": len(sources),
         },
-        "created_at": datetime.now(timezone.utc),
+        "created_at": assistant_created_at,
     }
     await _insert_messages([user_document, assistant_document])
     await _ensure_session_metadata(
