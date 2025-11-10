@@ -51,10 +51,24 @@ echo.
 
 REM Get the project root directory (parent of scripts folder)
 set "PROJECT_ROOT=%~dp0.."
+set "BACKEND_ENV=RAG"
+set "CONDA_EXE="
+for /f "delims=" %%i in ('where conda.exe 2^>nul') do (
+    if not defined CONDA_EXE set "CONDA_EXE=%%~fi"
+)
+if defined CONDA_EXE (
+    echo Using Conda environment %BACKEND_ENV% for backend...
+) else (
+    echo WARNING: conda.exe not found. Backend will run with current environment.
+)
 
 REM Start Backend Server
 echo Starting Backend Server...
-start "RAG Backend Server" cmd /k "cd /d "%PROJECT_ROOT%\backend" && echo Starting FastAPI Backend... && uvicorn app.main:app --reload"
+if defined CONDA_EXE (
+    start "RAG Backend Server" cmd /k "cd /d ""%PROJECT_ROOT%\backend"" && echo Starting FastAPI Backend in Conda environment %BACKEND_ENV%... && ""%CONDA_EXE%"" run --no-capture-output -n ""%BACKEND_ENV%"" uvicorn app.main:app --reload"
+) else (
+    start "RAG Backend Server" cmd /k "cd /d ""%PROJECT_ROOT%\backend"" && echo Starting FastAPI Backend (conda.exe not found; using current environment)... && uvicorn app.main:app --reload"
+)
 echo Backend server starting in new window...
 echo.
 

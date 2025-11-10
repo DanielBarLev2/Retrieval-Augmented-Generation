@@ -13,9 +13,10 @@ from app.db import (
     get_qdrant_client,
     verify_connection,
 )
-from app.routers import health
 from app.routers import chat
+from app.routers import health
 from app.routers import ingest
+from app.routers import knowledge
 
 
 @asynccontextmanager
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(chat.router, prefix="/chat", tags=["chat"])
     app.include_router(ingest.router, prefix="/ingest", tags=["ingest"])
+    app.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
 
     @app.get("/")
     async def root():

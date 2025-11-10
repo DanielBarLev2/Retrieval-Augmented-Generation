@@ -1,39 +1,105 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import Message, { type ChatMessage } from './Message';
-import { ApiError, postChat, type ChatHistoryTurn } from '../api/client';
-
-const SESSION_STORAGE_KEY = 'rag-chat-session-id';
+import {
+  ApiError,
+  getChatSessionMessages,
+  postChat,
+  type ChatHistoryTurn,
+} from '../api/client';
 
 const createMessageId = () =>
   typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-const Chat = () => {
+interface ChatProps {
+  activeSessionId: string | null;
+  onSessionChange: (sessionId: string | null) => void;
+  onRefreshSessions: () => void;
+}
+
+const Chat = ({ activeSessionId, onSessionChange, onRefreshSessions }: ChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [sessionId, setSessionId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') {
-      return null;
-    }
-
-    const stored = window.localStorage.getItem(SESSION_STORAGE_KEY);
-    return stored && stored.length > 0 ? stored : null;
-  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && sessionId) {
-      window.localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
-    }
-  }, [sessionId]);
-
-  useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsLoading(false);
+
+    if (!activeSessionId) {
+      setMessages([]);
+      setHistoryError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const loadHistory = async () => {
+      setIsHistoryLoading(true);
+      setHistoryError(null);
+      setError(null);
+      try {
+        const response = await getChatSessionMessages(activeSessionId, controller.signal);
+        if (cancelled) {
+          return;
+        }
+
+        const hydratedMessages: ChatMessage[] = response.messages.map((message) => ({
+          id: message.id,
+          role: message.role,
+          content: message.content,
+          createdAt: message.created_at,
+          sources: message.sources,
+          latencyMs: message.latency_ms ?? undefined,
+        }));
+        setMessages(hydratedMessages);
+      } catch (err) {
+        if (cancelled || (err as Error).name === 'AbortError') {
+          return;
+        }
+        if (err instanceof ApiError) {
+          if (err.status === 404) {
+            setHistoryError('Session no longer exists. Starting a new chat.');
+            setMessages([]);
+            onSessionChange(null);
+            return;
+          }
+          setHistoryError(
+            err.status >= 500
+              ? 'Unable to load chat history from the server.'
+              : 'Unable to load chat history.',
+          );
+        } else {
+          setHistoryError('Network error while loading chat history.');
+        }
+        setMessages([]);
+      } finally {
+        if (!cancelled) {
+          setIsHistoryLoading(false);
+        }
+      }
+    };
+
+    void loadHistory();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [activeSessionId, onSessionChange]);
 
   const historyPayload = useMemo<ChatHistoryTurn[]>(() => {
     return messages.map((message) => ({
@@ -69,7 +135,7 @@ const Chat = () => {
         const response = await postChat(
           {
             message: trimmed,
-            session_id: sessionId,
+            session_id: activeSessionId,
             history: historyPayload,
           },
           abortControllerRef.current.signal,
@@ -84,8 +150,11 @@ const Chat = () => {
           sources: response.sources,
         };
 
-        setSessionId(response.session_id);
+        if (response.session_id !== activeSessionId) {
+          onSessionChange(response.session_id);
+        }
         setMessages((prev) => [...prev, assistantMessage]);
+        onRefreshSessions();
       } catch (err) {
         if (err instanceof ApiError) {
           setError(
@@ -101,7 +170,7 @@ const Chat = () => {
         setIsLoading(false);
       }
     },
-    [historyPayload, input, isLoading, sessionId],
+    [activeSessionId, historyPayload, input, isLoading, onRefreshSessions, onSessionChange],
   );
 
   const handleStop = () => {
@@ -123,12 +192,14 @@ const Chat = () => {
         </div>
         <div className="session-badge" aria-live="polite">
           <span className="session-label">Session</span>
-          <span className="session-id">{sessionId ?? 'pending'}</span>
+          <span className="session-id">{activeSessionId ?? 'pending'}</span>
         </div>
       </header>
 
       <main className="chat-messages" role="log" aria-live="polite">
-        {messages.length === 0 && (
+        {isHistoryLoading && <div className="chat-history-loading">Loading chat history…</div>}
+        {historyError && <div className="chat-history-error">{historyError}</div>}
+        {!isHistoryLoading && !historyError && messages.length === 0 && (
           <div className="chat-empty-state">
             <p>Welcome! Ask the assistant anything about Retrieval-Augmented Generation topics.</p>
           </div>
@@ -150,7 +221,7 @@ const Chat = () => {
           placeholder="Type your question..."
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          disabled={isLoading}
+          disabled={isLoading || isHistoryLoading}
         />
         <div className="chat-actions">
           {error && <div className="chat-error">{error}</div>}
@@ -160,8 +231,8 @@ const Chat = () => {
                 Stop
               </button>
             )}
-            <button type="submit" disabled={isLoading || !input.trim()}>
-              {isLoading ? 'Sending…' : 'Send'}
+            <button type="submit" disabled={isLoading || isHistoryLoading || !input.trim()}>
+              {isLoading ? 'Sending…' : isHistoryLoading ? 'Loading…' : 'Send'}
             </button>
           </div>
         </div>

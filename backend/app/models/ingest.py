@@ -106,3 +106,15 @@ class WikipediaUrlIngestRequest(BaseModel):
         if not cleaned:
             raise ValueError("At least one valid Wikipedia URL must be provided.")
         return cleaned
+
+
+class KnowledgeReference(BaseModel):
+    """
+    Summary of an article stored in the knowledge base.
+    """
+
+    page_id: int = Field(..., description="Wikipedia page identifier.")
+    title: str | None = Field(None, description="Title of the ingested article.")
+    topic: str | None = Field(None, description="Topic associated with the article.")
+    url: str | None = Field(None, description="Source URL for the article.")
+    chunk_count: int = Field(0, ge=0, description="Number of embedded chunks for the article.")

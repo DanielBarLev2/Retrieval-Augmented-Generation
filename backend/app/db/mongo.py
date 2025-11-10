@@ -53,6 +53,13 @@ def get_messages_collection(client: MongoClient | None = None) -> Collection:
     return database[settings.mongodb_messages_collection]
 
 
+def get_sessions_collection(client: MongoClient | None = None) -> Collection:
+    """Return the collection used to store chat session metadata."""
+    settings = get_settings()
+    database = get_database(client)
+    return database[settings.mongodb_sessions_collection]
+
+
 def ensure_indexes(client: MongoClient | None = None) -> None:
     """
     Create the indexes that the chat flow relies on.
@@ -62,6 +69,9 @@ def ensure_indexes(client: MongoClient | None = None) -> None:
     collection = get_messages_collection(client)
     collection.create_index("session_id", name="session_id_idx")
     collection.create_index([("created_at", -1)], name="created_at_desc_idx")
+
+    sessions_collection = get_sessions_collection(client)
+    sessions_collection.create_index("session_id", name="session_id_unique", unique=True)
 
 
 def verify_connection(client: MongoClient | None = None) -> None:

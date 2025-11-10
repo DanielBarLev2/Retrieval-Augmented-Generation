@@ -43,6 +43,16 @@ def test_chat_endpoint_success(monkeypatch):
     fake_collection = FakeCollection()
     monkeypatch.setattr("app.routers.chat.get_messages_collection", lambda: fake_collection)
 
+    class FakeSessionsCollection:
+        def __init__(self):
+            self.upserts = []
+
+        def update_one(self, filter_doc, update_doc, upsert=False):
+            self.upserts.append((filter_doc, update_doc, upsert))
+
+    fake_sessions_collection = FakeSessionsCollection()
+    monkeypatch.setattr("app.routers.chat.get_sessions_collection", lambda: fake_sessions_collection)
+
     async def fake_run_in_threadpool(func, *args, **kwargs):
         return func(*args, **kwargs)
 

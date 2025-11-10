@@ -91,3 +91,54 @@ class ChatResponse(BaseModel):
     created_at: datetime
 
 
+class StoredChatMessage(BaseModel):
+    """
+    Representation of a message persisted in MongoDB and returned to the frontend.
+    """
+
+    id: str
+    role: Literal["user", "assistant"]
+    content: str
+    created_at: datetime
+    sources: list[ChatSource] = Field(default_factory=list)
+    latency_ms: float | None = None
+
+
+class ChatSessionMessages(BaseModel):
+    """
+    Response payload containing the ordered messages for a chat session.
+    """
+
+    session_id: str
+    messages: list[StoredChatMessage]
+
+
+class ChatSessionSummary(BaseModel):
+    """
+    Lightweight representation of a chat session for sidebar listings.
+    """
+
+    session_id: str
+    title: str | None = None
+    message_count: int
+    last_message_at: datetime
+    last_message_preview: str | None = None
+    last_message_role: Literal["user", "assistant"] | None = None
+
+
+class ChatSessionUpdate(BaseModel):
+    """
+    Payload for updating chat session metadata.
+    """
+
+    title: str = Field(..., min_length=1, max_length=120, description="Display name for the session.")
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Title must be non-empty.")
+        return cleaned
+
+

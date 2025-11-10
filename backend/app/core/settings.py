@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     mongodb_uri: str = Field("mongodb://localhost:27017", alias="MONGODB_URI")
     mongodb_database: str = Field("rag_portfolio", alias="MONGODB_DATABASE")
     mongodb_messages_collection: str = Field("messages", alias="MONGODB_MESSAGES_COLLECTION")
+    mongodb_sessions_collection: str = Field("sessions", alias="MONGODB_SESSIONS_COLLECTION")
     mongodb_server_selection_timeout_ms: int = Field(5000, alias="MONGODB_SERVER_SELECTION_TIMEOUT_MS")
     
     qdrant_url: str = Field("http://localhost:6333", alias="QDRANT_URL")

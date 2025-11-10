@@ -56,7 +56,31 @@ Start-Sleep -Seconds 5
 Write-Host "Starting Backend Server..." -ForegroundColor Yellow
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $backendPath = Join-Path $projectRoot "backend"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$backendPath'; Write-Host 'Starting FastAPI Backend...' -ForegroundColor Cyan; uvicorn app.main:app --reload"
+$backendEnvName = "RAG"
+$condaCommand = Get-Command "conda.exe" -ErrorAction SilentlyContinue
+if ($null -ne $condaCommand) {
+    $condaExecutable = $condaCommand.Source
+} else {
+    $condaExecutable = $null
+}
+
+if ($null -ne $condaExecutable) {
+    Write-Host "Launching backend with Conda environment '$backendEnvName'..." -ForegroundColor Cyan
+    $backendCommand = [string]::Format(
+        "cd '{0}'; Write-Host ""Starting FastAPI Backend in Conda environment '{1}'..."" -ForegroundColor Cyan; & ""{2}"" run --no-capture-output -n ""{1}"" uvicorn app.main:app --reload",
+        $backendPath,
+        $backendEnvName,
+        $condaExecutable
+    )
+} else {
+    Write-Host "WARNING: 'conda.exe' not found on PATH. Starting backend in current environment." -ForegroundColor Yellow
+    $backendCommand = [string]::Format(
+        "cd '{0}'; Write-Host ""Starting FastAPI Backend in current environment (conda.exe not found)."" -ForegroundColor Yellow; uvicorn app.main:app --reload",
+        $backendPath
+    )
+}
+
+Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCommand
 Write-Host "Backend server starting in new window..." -ForegroundColor Green
 Write-Host ""
 

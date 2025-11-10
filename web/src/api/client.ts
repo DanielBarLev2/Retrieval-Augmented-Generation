@@ -23,6 +23,41 @@ export interface ChatResponsePayload {
   created_at: string;
 }
 
+export interface ChatSessionSummary {
+  session_id: string;
+  title?: string | null;
+  message_count: number;
+  last_message_at: string;
+  last_message_preview?: string | null;
+  last_message_role?: ChatRole | null;
+}
+
+export interface StoredChatMessagePayload {
+  id: string;
+  role: ChatRole;
+  content: string;
+  created_at: string;
+  sources?: ChatSource[];
+  latency_ms?: number | null;
+}
+
+export interface ChatSessionMessagesResponse {
+  session_id: string;
+  messages: StoredChatMessagePayload[];
+}
+
+export interface KnowledgeReference {
+  page_id: number;
+  title?: string | null;
+  topic?: string | null;
+  url?: string | null;
+  chunk_count: number;
+}
+
+export interface ChatSessionUpdatePayload {
+  title: string;
+}
+
 export interface ChatHistoryTurn {
   role: ChatRole;
   content: string;
@@ -95,6 +130,23 @@ export const postChat = async (
 
 export { ApiError };
 
+const getJson = async <TResult>(path: string, signal?: AbortSignal): Promise<TResult> => {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    signal,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || 'Request failed');
+  }
+
+  return (await response.json()) as TResult;
+};
+
 const postJson = async <TBody, TResult>(
   path: string,
   payload: TBody,
@@ -131,4 +183,61 @@ export const ingestWikipediaUrls = async (
     payload,
     signal,
   );
+
+export const listChatSessions = async (signal?: AbortSignal) =>
+  getJson<ChatSessionSummary[]>('/chat/sessions', signal);
+
+export const getChatSessionMessages = async (sessionId: string, signal?: AbortSignal) =>
+  getJson<ChatSessionMessagesResponse>(`/chat/sessions/${sessionId}/messages`, signal);
+
+export const deleteChatSession = async (sessionId: string) => {
+  const response = await fetch(`${apiBaseUrl}/chat/sessions/${sessionId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || 'Failed to delete chat session');
+  }
+};
+
+export const updateChatSession = async (
+  sessionId: string,
+  payload: ChatSessionUpdatePayload,
+): Promise<ChatSessionSummary> => {
+  const response = await fetch(`${apiBaseUrl}/chat/sessions/${sessionId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || 'Failed to update chat session');
+  }
+
+  return (await response.json()) as ChatSessionSummary;
+};
+
+export const listKnowledgeReferences = async (signal?: AbortSignal) =>
+  getJson<KnowledgeReference[]>('/knowledge/references', signal);
+
+export const deleteKnowledgeReference = async (pageId: number) => {
+  const response = await fetch(`${apiBaseUrl}/knowledge/references/${pageId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new ApiError(response.status, errorText || 'Failed to delete knowledge reference');
+  }
+};
 
