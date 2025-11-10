@@ -66,3 +66,43 @@ class WikipediaIngestResponse(BaseModel):
     skipped_pages: int = 0
     dry_run: bool = False
 
+
+class WikipediaUrlIngestRequest(BaseModel):
+    """
+    Request schema for ingesting explicit Wikipedia page URLs.
+    """
+
+    urls: List[str] = Field(
+        ...,
+        min_length=1,
+        description="One or more concrete Wikipedia page URLs to ingest.",
+    )
+    language: str = Field(
+        "en",
+        pattern="^[a-z]{2}$",
+        description="Two-letter Wikipedia language edition to target.",
+    )
+    chunk_size: int = Field(
+        400,
+        ge=100,
+        le=2000,
+        description="Target number of tokens (approximate words) in each chunk.",
+    )
+    chunk_overlap: int = Field(
+        40,
+        ge=0,
+        le=400,
+        description="Number of tokens to overlap between consecutive chunks.",
+    )
+    dry_run: bool = Field(
+        False,
+        description="If true, fetch and process pages but skip embedding/upsert.",
+    )
+
+    @field_validator("urls")
+    @classmethod
+    def validate_urls(cls, urls: List[str]) -> List[str]:
+        cleaned = [url.strip() for url in urls if url and url.strip()]
+        if not cleaned:
+            raise ValueError("At least one valid Wikipedia URL must be provided.")
+        return cleaned
