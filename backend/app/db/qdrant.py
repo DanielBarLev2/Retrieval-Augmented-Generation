@@ -71,9 +71,9 @@ def ensure_collection(client: QdrantClient | None = None) -> None:
 
     client = client or get_qdrant_client()
 
-    if client.has_collection(collection_name):
+    if client.collection_exists(collection_name):
         info = client.get_collection(collection_name)
-        params = _resolve_vector_params(info.config.params.vectors_config)
+        params = _resolve_vector_params(info.config.params.vectors)
 
         if params.size != expected_vector_size:
             raise ValueError(
