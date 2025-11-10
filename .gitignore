@@ -1,0 +1,5 @@
+.env
+*.env
+backend/.env
+.cursor/plans
+__pycache__/
