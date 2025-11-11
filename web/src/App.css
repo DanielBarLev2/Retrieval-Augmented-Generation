@@ -5,15 +5,15 @@
   display: flex;
   align-items: stretch;
   justify-content: center;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem 1.5rem 2rem;
   box-sizing: border-box;
 }
 
 .app-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
   gap: 1.75rem;
-  width: min(1300px, 100%);
+  width: min(1500px, 100%);
   align-items: stretch;
 }
 
@@ -745,6 +745,11 @@ button.secondary:hover:not(:disabled) {
   color: #f8fafc;
   line-height: 1.6;
   font-size: 1rem;
+}
+
+.message-content {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .message.user .message-bubble {
