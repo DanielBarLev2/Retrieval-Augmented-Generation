@@ -29,4 +29,5 @@ def test_prompt_builder_defaults():
 
     assert DEFAULT_SYSTEM_PROMPT in prompt
     assert "Retrieved Context" not in prompt
+    assert builder.general_knowledge_instructions in prompt
 

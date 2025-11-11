@@ -29,8 +29,19 @@ router = APIRouter()
 
 def _build_sources(chunks: Iterable[RetrievedChunk]) -> list[ChatSource]:
     sources: list[ChatSource] = []
+    seen_keys: set[tuple] = set()
     for chunk in chunks:
         payload = chunk.payload
+        key = (
+            payload.get("url"),
+            payload.get("page_id"),
+            payload.get("title"),
+        )
+        if key == (None, None, None):
+            key = (chunk.id,)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
         sources.append(
             ChatSource(
                 title=payload.get("title"),
@@ -312,6 +323,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 request.message,
                 limit=request.top_k,
                 with_vectors=False,
+                score_threshold=settings.retriever_score_threshold,
             )
         )
     except ValueError as exc:
@@ -323,7 +335,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         ) from exc
 
     contexts = _extract_contexts(retrieved_chunks)
-    sources = _build_sources(retrieved_chunks)
+    sources = _build_sources(retrieved_chunks) if contexts else []
 
     history_turns = [
         ChatTurn(role=turn.role, content=turn.content) for turn in request.history
@@ -333,6 +345,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         question=request.message,
         contexts=contexts,
         history=history_turns,
+        general_knowledge=not bool(contexts),
     )
 
     model_name = request.model or settings.ollama_model
@@ -382,7 +395,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         "session_id": session_id,
         "role": "assistant",
         "content": answer,
-        "sources": [source.model_dump() for source in sources],
+        "sources": [source.model_dump() for source in sources] if contexts else [],
         "metadata": {
             "model": model_name,
             "latency_ms": latency_ms,

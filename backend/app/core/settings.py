@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     embed_model: str = Field("sentence-transformers/bge-small-en-v1.5", alias="EMBED_MODEL")
     ollama_host: str = Field("http://localhost:11434", alias="OLLAMA_HOST")
     ollama_model: str = Field("llama3.2:3b", alias="OLLAMA_MODEL")
+    retriever_score_threshold: float | None = Field(
+        default=None,
+        alias="RETRIEVER_SCORE_THRESHOLD",
+        description="Minimum similarity score required for retrieved chunks to be considered relevant.",
+    )
 
     class Config:
         env_file = ".env"

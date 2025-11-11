@@ -38,11 +38,16 @@ class PromptBuilder:
         *,
         system_prompt: str | None = None,
         answer_instructions: str | None = None,
+        general_knowledge_instructions: str | None = None,
     ):
         self.system_prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
         self.answer_instructions = (
             answer_instructions
-            or "Provide a concise, factual answer grounded in the context."
+            or "Provide a concise, factual answer grounded in the relevant context. Ignore any snippets that do not relate to the user question."
+        )
+        self.general_knowledge_instructions = (
+            general_knowledge_instructions
+            or "No supporting context was retrieved for this question. Provide a concise, factual answer based on your general knowledge and note that no sources are available."
         )
 
     @staticmethod
@@ -62,6 +67,7 @@ class PromptBuilder:
         question: str,
         contexts: Sequence[str],
         history: Sequence[ChatTurn] | None = None,
+        general_knowledge: bool = False,
     ) -> str:
         """
         Produce a single prompt string suitable for Ollama's generate endpoint.
@@ -76,7 +82,10 @@ class PromptBuilder:
         if contexts:
             sections.append(f"Retrieved Context:\n{self._format_context(contexts)}")
 
-        sections.append(f"Instructions:\n{self.answer_instructions}")
+        instructions = (
+            self.general_knowledge_instructions if general_knowledge or not contexts else self.answer_instructions
+        )
+        sections.append(f"Instructions:\n{instructions}")
         sections.append(f"User Question:\n{question.strip()}")
         sections.append("Answer:")
 

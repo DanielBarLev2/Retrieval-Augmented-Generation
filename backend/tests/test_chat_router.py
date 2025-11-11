@@ -26,8 +26,15 @@ def test_chat_endpoint_success(monkeypatch):
         def __init__(self):
             self.calls = []
 
-        def search(self, query: str, *, limit: int, with_vectors: bool):
-            self.calls.append((query, limit, with_vectors))
+        def search(
+            self,
+            query: str,
+            *,
+            limit: int,
+            with_vectors: bool,
+            score_threshold: float | None = None,
+        ):
+            self.calls.append((query, limit, with_vectors, score_threshold))
             return fake_chunks
 
     fake_retriever = FakeRetriever()
@@ -95,7 +102,7 @@ def test_chat_endpoint_success(monkeypatch):
     assert data["latency_ms"] >= 0.0
 
     # Retrieval called with expected parameters
-    assert fake_retriever.calls == [("Explain testing.", 3, False)]
+    assert fake_retriever.calls == [("Explain testing.", 3, False, None)]
 
     # Messages persisted
     assert len(fake_collection.inserted) == 2
