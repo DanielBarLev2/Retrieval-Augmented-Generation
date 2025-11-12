@@ -1,14 +1,12 @@
-# Retrieval-Augmented Generation (RAG) Application
+# Retrieval-Augmented Generation Chat Application ✨
 
-A portfolio project demonstrating RAG capabilities using **Ollama** and **Wikipedia** as the knowledge base. This application shows how you can "finetune" any AI to **YOUR actual needs** without expensive model training. Simply feed your AI with your own knowledge base—company documents, internal wikis, product specifications, or any domain-specific content.
+A project demonstrating RAG capabilities using **Ollama** and **Wikipedia** as the knowledge base. This application shows how you can "finetune" any AI to **YOUR actual needs** without expensive model training. Simply feed your AI with your own knowledge base, company documents, internal wikis, product specifications, or any domain-specific content.
 
 **The best part?** This architecture is easily applicable to other LLM models (GPT, Claude, etc.) and can work with your personal data sources beyond Wikipedia. The AI answers questions using your actual data, with full citation and source transparency.
 
 ---
 
-## Demo & Features
-
-### Why RAG?
+## Why RAG?
 
 Traditional AI models are trained on general knowledge and may not have access to your company's specific information, internal processes, or proprietary data. **Retrieval-Augmented Generation (RAG)** solves this by:
 
@@ -18,28 +16,17 @@ Traditional AI models are trained on general knowledge and may not have access t
 **Domain-Specific Expertise** - Transform generic AI into a specialist for your company's needs  
 **Cost-Effective** - Significantly cheaper than training custom models while achieving similar results
 
-### 🎯 RAG in Action: Context Makes the Difference
+### RAG in Action: Context Makes the Difference 🎯
 
-See the dramatic difference RAG makes when answering questions. The side-by-side comparison below shows how context transforms generic AI responses into accurate, cited answers.
+See the dramatic difference RAG makes when answering questions. The comparison below shows how context transforms generic AI responses into accurate, cited answers.
 
-<table>
-<tr>
-<td width="50%">
-
-**Without Context (Standard AI)**
+#### Without Context (Standard AI)
 
 ![No Context](demo/no_contex.png)
 
-</td>
-<td width="50%">
-
-**With RAG Context (Enhanced AI)**
+#### With RAG Context (Enhanced AI)
 
 ![With Context](demo/with_context.png)
-
-</td>
-</tr>
-</table>
 
 **Without RAG**, the AI relies solely on its training data, which can lead to:
 - Generic or outdated information
@@ -48,15 +35,15 @@ See the dramatic difference RAG makes when answering questions. The side-by-side
 - Potential hallucinations when asked about proprietary information
 
 **With RAG**, the AI:
-- 🔍 **Retrieves relevant chunks** from your knowledge base using semantic search
-- 🧠 **Synthesizes answers** using both the retrieved context and its general knowledge
-- 📖 **Provides citations** linking back to the original sources
-- ⚡ **Stays current** with your latest documents and information
-- ✅ **Answers accurately** about your company's specific content
+- **Retrieves relevant chunks** 🔍 from your knowledge base using semantic search
+- **Synthesizes answers** 🧠 using both the retrieved context and its general knowledge
+- **Provides citations** 📖 linking back to the original sources
+- **Stays current** ⚡ with your latest documents and information
+- **Answers accurately** ✅ about your company's specific content
 
 The difference is clear: RAG-powered responses are grounded in your actual data, making the AI a reliable assistant for your organization's needs.
 
-### 📚 Knowledge Base Management
+### Knowledge Base Management 📚
 
 Build and manage your knowledge base with ease. The interface below shows both ingestion and management capabilities side by side.
 
@@ -79,7 +66,7 @@ Build and manage your knowledge base with ease. The interface below shows both i
 </tr>
 </table>
 
-#### 🎨 Populate Your Knowledge Base
+#### Populate Your Knowledge Base 🎨
 
 Easily add content to your knowledge base through two methods:
 
@@ -93,26 +80,26 @@ The ingestion process:
 - Generates vector embeddings for each chunk
 - Stores everything in Qdrant vector database for fast retrieval
 
-#### 🗂️ Manage Your References
+#### Manage Your References 🗂️
 
 Full transparency and control over your knowledge base:
 
-- 👀 **View All Ingested Content** - See every article, document, or reference in your knowledge base
-- 📊 **Monitor Chunk Counts** - Understand how your content is structured and indexed
-- 🗑️ **Remove Outdated Content** - Delete references that are no longer relevant
-- 🔗 **Track Sources** - Each reference shows title, topic, URL, and chunk count
+- **View All Ingested Content** 👀 - See every article, document, or reference in your knowledge base
+- **Monitor Chunk Counts** 📊 - Understand how your content is structured and indexed
+- **Remove Outdated Content** 🗑️ - Delete references that are no longer relevant
+- **Track Sources** 🔗 - Each reference shows title, topic, URL, and chunk count
 
 This management interface ensures your knowledge base stays clean, relevant, and up-to-date with your company's evolving needs.
 
-### ✨ Key Features
+### Key Features ✨
 
-- 🔎 **Semantic Search** - Find relevant information using vector similarity search
-- 💬 **Multi-Session Chat** - Manage multiple conversation threads
-- 📝 **Source Citations** - Every answer includes clickable source links
-- 🌐 **Wikipedia Integration** - Easy ingestion of Wikipedia content (easily extensible to other sources)
-- ⚡ **Real-Time Updates** - Add or remove knowledge without downtime
-- 🎨 **Modern UI** - Clean, responsive React interface
-- 🔌 **RESTful API** - Full FastAPI backend with OpenAPI documentation
+- **Semantic Search** 🔎 - Find relevant information using vector similarity search
+- **Multi-Session Chat** 💬 - Manage multiple conversation threads
+- **Source Citations** 📝 - Every answer includes clickable source links
+- **Wikipedia Integration** 🌐 - Easy ingestion of Wikipedia content (easily extensible to other sources)
+- **Real-Time Updates** ⚡ - Add or remove knowledge without downtime
+- **Modern UI** 🎨 - Clean, responsive React interface
+- **RESTful API** 🔌 - Full FastAPI backend with OpenAPI documentation
 
 ---
 
@@ -122,10 +109,10 @@ This management interface ensures your knowledge base stays clean, relevant, and
 
 Before you begin, ensure you have the following installed:
 
-- 🐍 **Python 3.11+** (with pip)
-- 📦 **Node.js 18+** and **npm**
-- 🐳 **Docker Desktop** (for Qdrant and MongoDB)
-- 🤖 **Ollama** (for running local LLM models)
+- **Python 3.11+** 🐍 (with pip)
+- **Node.js 18+** 📦 and **npm**
+- **Docker Desktop** 🐳 (for Qdrant and MongoDB)
+- **Ollama** 🤖 (for running local LLM models)
 
 ### Quick Start
 
@@ -144,11 +131,11 @@ scripts\start.bat
 ```
 
 These scripts will:
-1. ✅ Check if Docker is running
-2. 🗄️ Start Qdrant vector database container (port 6333)
-3. 🍃 Start MongoDB container (port 27017)
-4. 🚀 Launch FastAPI backend server (port 8000)
-5. ⚛️ Launch React frontend dev server (port 5173)
+1. Check if Docker is running ✅
+2. Start Qdrant vector database container (port 6333) 🗄️
+3. Start MongoDB container (port 27017) 🍃
+4. Launch FastAPI backend server (port 8000) 🚀
+5. Launch React frontend dev server (port 5173) ⚛️
 
 To stop all services:
 
@@ -162,7 +149,7 @@ or
 scripts\stop.bat
 ```
 
-### 🔧 Manual Setup
+### Manual Setup 🔧
 
 If you prefer to set up manually or need more control:
 
@@ -262,17 +249,17 @@ cd web
 npm run dev
 ```
 
-### 🌐 Access Points
+### Access Points 🌐
 
 Once everything is running, you can access:
 
-- 🖥️ **Frontend UI**: http://localhost:5173
-- 🔌 **Backend API**: http://localhost:8000
-- 📖 **API Documentation**: http://localhost:8000/docs
-- 📊 **Qdrant Dashboard**: http://localhost:6333/dashboard
-- 🍃 **MongoDB**: mongodb://localhost:27017
+- **Frontend UI** 🖥️: http://localhost:5173
+- **Backend API** 🔌: http://localhost:8000
+- **API Documentation** 📖: http://localhost:8000/docs
+- **Qdrant Dashboard** 📊: http://localhost:6333/dashboard
+- **MongoDB** 🍃: mongodb://localhost:27017
 
-### 📁 Project Structure
+### Project Structure 📁
 
 ```
 Retrieval-Augmented-Generation/
