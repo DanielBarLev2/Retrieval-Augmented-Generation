@@ -93,7 +93,7 @@ async def delete_reference(page_id: int) -> Response:
         result = client.count(
             collection_name=settings.collection_name,
             exact=True,
-            filter=filter_,
+            count_filter=filter_,
         )
         return result.count
 
@@ -110,5 +110,6 @@ async def delete_reference(page_id: int) -> Response:
 
     await run_in_threadpool(_delete)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 
 
